@@ -6,7 +6,7 @@ response = ollama.list()
 res = ollama.chat(
     model="llama3.2",
     messages=[
-        {"role": "user", "content": "why is the sky blue?"},
+        {"role": "user", "content": "what is your name?"},
     ],
 )
 
@@ -15,7 +15,7 @@ res = ollama.chat(
     messages=[
         {
             "role": "user",
-            "content": "why is the ocean so salty?",
+            "content": "what is a flower?",
         },
     ],
     stream=True,
@@ -23,7 +23,7 @@ res = ollama.chat(
 
 res = ollama.generate(
     model="llama3.2",
-    prompt="why is the sky blue?",
+    prompt="what is your name?",
 )
 
 modelfile = """
@@ -33,7 +33,7 @@ PARAMETER temperature 0.1
 """
 ollama.create(model="knowitall", modelfile=modelfile)
 
-res = ollama.generate(model="knowitall", prompt="why is the ocean so salty?")
+res = ollama.generate(model="knowitall", prompt="whst is a flower?")
 print(res["response"])
 
 ollama.delete("knowitall")
