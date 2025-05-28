@@ -15,18 +15,15 @@ for pdf_file in pdf_files:
     file_path = os.path.join("./data", pdf_file)
     print(f"Processing PDF file: {pdf_file}")
 
-    # Load the PDF file
     loader = PDFPlumberLoader(file_path=file_path)
     pages = loader.load_and_split()
     print(f"pages length: {len(pages)}")
 
     all_pages.extend(pages)
 
-    # Extract text from the PDF file
     text = pages[0].page_content
     print(f"Text extracted from the PDF file '{pdf_file}':\n{text}\n")
 
-    # Prepare the prompt for the model
     prompt = f"""
     You are an AI assistant that helps with summarizing PDF documents.
     
@@ -37,18 +34,15 @@ for pdf_file in pdf_files:
     Please summarize the content of this document in a few sentences.
     """
 
-    # Send the prompt and get the response
     try:
         response = ollama.generate(model=model, prompt=prompt)
         summary = response.get("response", "")
 
-        # print(f"Summary of the PDF file '{pdf_file}':\n{summary}\n")
     except Exception as e:
         print(
             f"An error occurred while summarizing the PDF file '{pdf_file}': {str(e)}"
         )
 
-# Split and chunk
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 text_splitter = RecursiveCharacterTextSplitter(chunk_size=1200, chunk_overlap=300)
@@ -61,8 +55,6 @@ for page in all_pages:
 print(f"Number of text chunks: {text_chunks}")
 
 
-# === Create Metadata for Text Chunks ===
-# Example metadata management (customize as needed)
 def add_metadata(chunks, doc_title):
     metadata_chunks = []
     for chunk in chunks:
@@ -75,68 +67,52 @@ def add_metadata(chunks, doc_title):
     return metadata_chunks
 
 
-# add metadata to text chunks
 metadata_text_chunks = add_metadata(text_chunks, "BOI US FinCEN")
-# pprint.pprint(f"metadata text chunks: {metadata_text_chunks}")
 
 
-# === Create Embedding from Text Chunks ===
 ollama.pull("nomic-embed-text")
 
 
-# Function to generate embeddings for text chunks
 def generate_embeddings(text_chunks, model_name="nomic-embed-text"):
     embeddings = []
     for chunk in text_chunks:
-        # Generate the embedding for each chunk
         embedding = ollama.embeddings(model=model_name, prompt=chunk)
         embeddings.append(embedding)
     return embeddings
 
 
-# example embeddings
 texts = [chunk["text"] for chunk in metadata_text_chunks]
 embeddings = generate_embeddings(texts)
-# print(f"Embeddings: {embeddings}")
 
 
-## === Add Embeddings to Vector Database Chromadb ===
 from langchain_community.vectorstores import Chroma
 from langchain.schema import Document
 from langchain_ollama import OllamaEmbeddings
 
-# Wrap texts with their respective metadata into Document objects
 docs = [
     Document(page_content=chunk["text"], metadata=chunk["metadata"])
     for chunk in metadata_text_chunks
 ]
 
-# == Use fastEmbeddings model from Ollama ==
-# to add embeddings into the vector database
-# and have a better quality of the embeddings
 from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
 
 fastembedding = FastEmbedEmbeddings()
-# Also for performance improvement, persist the vector database
 vector_db_path = "./db/vector_db"
 
 vector_db = Chroma.from_documents(
     documents=docs,
     embedding=fastembedding,
     persist_directory=vector_db_path,
-    # embedding=OllamaEmbeddings(model="nomic-embed-text"),
     collection_name="docs-local-rag",
 )
 
 
-# Implement a Query Processing Muliti-query Retriever
 from langchain.prompts import ChatPromptTemplate, PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_ollama import ChatOllama
 from langchain_core.runnables import RunnablePassthrough
 from langchain.retrievers.multi_query import MultiQueryRetriever
 
-# LLM from Ollama
 local_model = "llama3.2"
 llm = ChatOllama(model=local_model)
 
@@ -155,7 +131,6 @@ retriever = MultiQueryRetriever.from_llm(
     vector_db.as_retriever(), llm, prompt=QUERY_PROMPT
 )
 
-# RAG prompt
 template = """Answer the question based ONLY on the following context:
 {context}
 Question: {question}
@@ -175,7 +150,6 @@ by when should I file if my business was established in 2013?"""
 print((chain.invoke(questions)))
 response = chain.invoke(questions)
 
-## === TALK TO THE MODEL ===
 from elevenlabs.client import ElevenLabs
 from elevenlabs import play
 from elevenlabs import stream
@@ -187,8 +161,6 @@ text_response = response
 
 api_key = os.getenv("ELEVENLABS_API_KEY")
 
-# Generate the audio stream
 client = ElevenLabs(api_key=api_key)
 audio_stream = client.generate(text=text_response, model="eleven_turbo_v2", stream=True)
-# play(audio_stream)
 stream(audio_stream)
