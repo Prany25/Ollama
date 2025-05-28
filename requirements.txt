@@ -1,4 +1,5 @@
 ollama
+python==3.12
 chromadb
 pdfplumber 
 langchain
