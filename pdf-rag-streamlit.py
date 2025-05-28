@@ -14,10 +14,8 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain.retrievers.multi_query import MultiQueryRetriever
 import ollama
 
-# Configure logging
 logging.basicConfig(level=logging.INFO)
 
-# Constants
 DOC_PATH = "./data/BOI.pdf"
 MODEL_NAME = "llama3.2"
 EMBEDDING_MODEL = "nomic-embed-text"
@@ -49,7 +47,6 @@ def split_documents(documents):
 @st.cache_resource
 def load_vector_db():
     """Load or create the vector database."""
-    # Pull the embedding model if not already available
     ollama.pull(EMBEDDING_MODEL)
 
     embedding = OllamaEmbeddings(model=EMBEDDING_MODEL)
@@ -62,12 +59,10 @@ def load_vector_db():
         )
         logging.info("Loaded existing vector database.")
     else:
-        # Load and process the PDF document
         data = ingest_pdf(DOC_PATH)
         if data is None:
             return None
 
-        # Split the documents into chunks
         chunks = split_documents(data)
 
         vector_db = Chroma.from_documents(
@@ -102,7 +97,6 @@ Original question: {question}""",
 
 def create_chain(retriever, llm):
     """Create the chain with preserved syntax."""
-    # RAG prompt
     template = """Answer the question based ONLY on the following context:
 {context}
 Question: {question}
@@ -124,28 +118,22 @@ Question: {question}
 def main():
     st.title("Document Assistant")
 
-    # User input
     user_input = st.text_input("Enter your question:", "")
 
     if user_input:
         with st.spinner("Generating response..."):
             try:
-                # Initialize the language model
                 llm = ChatOllama(model=MODEL_NAME)
 
-                # Load the vector database
                 vector_db = load_vector_db()
                 if vector_db is None:
                     st.error("Failed to load or create the vector database.")
                     return
 
-                # Create the retriever
                 retriever = create_retriever(vector_db, llm)
 
-                # Create the chain
                 chain = create_chain(retriever, llm)
 
-                # Get the response
                 response = chain.invoke(input=user_input)
 
                 st.markdown("**Assistant:**")

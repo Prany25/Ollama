@@ -77,6 +77,6 @@ chain = (
 )
 
 
-res = chain.invoke(input=("what does the document say?",))
+res = chain.invoke(input=("what does the document say[?",))
 
 print(res)
